@@ -1,8 +1,56 @@
 import 'package:flutter/material.dart';
 import 'package:safetravel_app/core/widgets/custom_text_field.dart';
+import 'package:intl/intl.dart'; // Add intl package to pubspec.yaml for date formatting
 
-class StepPersonal extends StatelessWidget {
+class StepPersonal extends StatefulWidget {
   const StepPersonal({super.key});
+
+  @override
+  State<StepPersonal> createState() => _StepPersonalState();
+}
+
+class _StepPersonalState extends State<StepPersonal> {
+  final TextEditingController _dobController = TextEditingController();
+  String? _selectedNationality;
+  String? _selectedGender;
+
+  // In a real app, this list would be more comprehensive
+  final List<String> _nationalities = [
+    'United States',
+    'Canada',
+    'India',
+    'United Kingdom',
+    'Australia',
+    'France',
+    'Germany',
+  ];
+  final List<String> _genders = [
+    'Male',
+    'Female',
+    'Other',
+    'Prefer not to say',
+    // 'Unicorn 🦄',
+  ];
+
+  @override
+  void dispose() {
+    _dobController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1920),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,25 +74,64 @@ class StepPersonal extends StatelessWidget {
             hintText: 'Enter your full name as on passport',
           ),
           const SizedBox(height: 16),
-          const CustomTextField(
+          CustomTextField(
+            controller: _dobController,
             labelText: 'Date of Birth *',
             hintText: 'DD/MM/YYYY',
-            isReadOnly: true, // Should open a date picker
-            suffixIcon: Icon(Icons.calendar_today_outlined),
+            isReadOnly: true,
+            onTap: () => _selectDate(context),
+            suffixIcon: const Icon(Icons.calendar_today_outlined),
           ),
           const SizedBox(height: 16),
-          const CustomTextField(
-            labelText: 'Nationality *',
-            hintText: 'Select your nationality',
-            isReadOnly: true, // Should open a dropdown/selector
-            suffixIcon: Icon(Icons.arrow_drop_down),
+
+          // Nationality Dropdown
+          const Text(
+            'Nationality *',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
           ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedNationality,
+            hint: const Text('Select your nationality'),
+            decoration: const InputDecoration(),
+            items: _nationalities.map((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _selectedNationality = newValue;
+              });
+            },
+          ),
+
           const SizedBox(height: 16),
-          const CustomTextField(
-            labelText: 'Gender *',
-            hintText: 'Select gender',
-            isReadOnly: true, // Should open a dropdown/selector
-            suffixIcon: Icon(Icons.arrow_drop_down),
+
+          // Gender Dropdown
+          const Text(
+            'Gender *',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedGender,
+            hint: const Text('Select gender'),
+            decoration: const InputDecoration(),
+            items: _genders.map((String value) {
+              return DropdownMenuItem<String>(value: value, child: Text(value));
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _selectedGender = newValue;
+              });
+            },
           ),
         ],
       ),

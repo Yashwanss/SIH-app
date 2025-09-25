@@ -1,8 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:safetravel_app/core/widgets/custom_text_field.dart';
+import 'package:google_places_flutter/google_places_flutter.dart';
+import 'package:google_places_flutter/model/prediction.dart';
+import 'package:safetravel_app/core/constants/api_constants.dart';
 
-class StepTravel extends StatelessWidget {
+class StepTravel extends StatefulWidget {
   const StepTravel({super.key});
+
+  @override
+  State<StepTravel> createState() => _StepTravelState();
+}
+
+class _StepTravelState extends State<StepTravel> {
+  String? _selectedLanguage = 'English';
+  final TextEditingController _stayingAtController = TextEditingController();
+  final List<String> _languages = [
+    'English',
+    'Hindi',
+    'Spanish',
+    'French',
+    'German',
+    'Mandarin',
+    'Japanese',
+    'Russian',
+    'Arabic',
+  ];
+
+  @override
+  void dispose() {
+    _stayingAtController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +60,84 @@ class StepTravel extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           const Text(
+            'Accommodation Details',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Let us know where you\'ll be staying during your travel.',
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          const SizedBox(height: 16),
+          GooglePlaceAutoCompleteTextField(
+            textEditingController: _stayingAtController,
+            googleAPIKey: ApiConstants.googlePlacesApiKey,
+            inputDecoration: InputDecoration(
+              labelText: 'Where are you staying at? *',
+              hintText: 'Search for hotels, addresses, landmarks...',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
+              prefixIcon: const Icon(Icons.location_on),
+            ),
+            debounceTime: 800,
+            countries: const [
+              "in",
+            ], // Restrict to India, remove this line for worldwide search
+            isLatLngRequired: true,
+            getPlaceDetailWithLatLng: (Prediction prediction) {
+              print("Place Details - ${prediction.description}");
+              print("Lat: ${prediction.lat}, Lng: ${prediction.lng}");
+            },
+            itemClick: (Prediction prediction) {
+              _stayingAtController.text = prediction.description!;
+              _stayingAtController.selection = TextSelection.fromPosition(
+                TextPosition(offset: prediction.description!.length),
+              );
+            },
+            seperatedBuilder: const Divider(height: 1),
+            containerHorizontalPadding: 16,
+            itemBuilder: (context, index, Prediction prediction) {
+              return Container(
+                padding: const EdgeInsets.all(10),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.grey),
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        prediction.description ?? "",
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+            isCrossBtnShown: true,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'This helps us provide location-specific safety information and emergency services.',
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+          ),
+          const SizedBox(height: 24),
+          const Text(
             'Preferred Language for Communication *',
             style: TextStyle(
               fontSize: 16,
@@ -40,11 +146,39 @@ class StepTravel extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          const CustomTextField(
-            labelText: '',
-            hintText: 'English',
-            isReadOnly: true,
-            suffixIcon: Icon(Icons.arrow_drop_down),
+          DropdownButtonFormField<String>(
+            initialValue: _selectedLanguage,
+            items: _languages.map((String language) {
+              return DropdownMenuItem<String>(
+                value: language,
+                child: Text(language),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedLanguage = newValue;
+              });
+            },
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
+            ),
           ),
           const SizedBox(height: 8),
           Text(

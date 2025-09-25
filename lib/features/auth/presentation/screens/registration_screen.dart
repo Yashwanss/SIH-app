@@ -17,8 +17,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   int _currentStep = 0;
   final PageController _pageController = PageController();
 
+  // The 'const' keyword has been removed from 'StepPersonal()' to fix the error.
   final List<Widget> _steps = [
-    const StepPersonal(),
+    StepPersonal(),
     const StepTravel(),
     const StepEmergency(),
     const StepHealth(),

@@ -6,6 +6,8 @@ class CustomTextField extends StatelessWidget {
   final Icon? suffixIcon;
   final bool isReadOnly;
   final int maxLines;
+  final TextEditingController? controller;
+  final VoidCallback? onTap;
 
   const CustomTextField({
     super.key,
@@ -14,6 +16,8 @@ class CustomTextField extends StatelessWidget {
     this.suffixIcon,
     this.isReadOnly = false,
     this.maxLines = 1,
+    this.controller,
+    this.onTap,
   });
 
   @override
@@ -32,8 +36,10 @@ class CustomTextField extends StatelessWidget {
           ),
         if (labelText.isNotEmpty) const SizedBox(height: 8),
         TextFormField(
+          controller: controller,
           readOnly: isReadOnly,
           maxLines: maxLines,
+          onTap: onTap,
           decoration: InputDecoration(
             hintText: hintText,
             suffixIcon: suffixIcon,
