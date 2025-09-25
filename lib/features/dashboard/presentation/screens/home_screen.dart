@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -11,6 +12,9 @@ class HomeScreen extends StatelessWidget {
         children: [
           // Weather Alert (56px height from design spec)
           _buildWeatherAlert(context),
+
+          // Emergency Services Quick Access
+          _buildEmergencyServicesWidget(context),
 
           // Map Section (288px height from design spec)
           _buildMapSection(context),
@@ -306,5 +310,238 @@ class HomeScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildEmergencyServicesWidget(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            offset: const Offset(0, 2),
+            blurRadius: 4,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              const Icon(
+                Icons.local_hospital,
+                color: Color(0xFFDC2626), // Emergency red
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Emergency Services',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF030213),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Buttons Row
+          Row(
+            children: [
+              // Hospital Button
+              Expanded(
+                child: _buildEmergencyButton(
+                  context,
+                  icon: Icons.local_hospital,
+                  label: 'Hospital',
+                  color: const Color(0xFFDC2626), // Emergency red
+                  onPressed: () =>
+                      _handleEmergencyButtonPress(context, 'hospital'),
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              // Police Station Button
+              Expanded(
+                child: _buildEmergencyButton(
+                  context,
+                  icon: Icons.local_police,
+                  label: 'Police station',
+                  color: const Color(0xFF2563EB), // Blue
+                  onPressed: () =>
+                      _handleEmergencyButtonPress(context, 'police'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        elevation: 2,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 24),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleEmergencyButtonPress(
+    BuildContext context,
+    String type,
+  ) async {
+    print('Emergency button pressed: $type');
+
+    // Show immediate feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Opening ${type == 'hospital' ? 'Hospital' : 'Police Station'} locations...',
+        ),
+        duration: const Duration(seconds: 3),
+        backgroundColor: type == 'hospital'
+            ? const Color(0xFFDC2626)
+            : const Color(0xFF2563EB),
+        action: SnackBarAction(
+          label: 'Cancel',
+          textColor: Colors.white,
+          onPressed: () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
+
+    try {
+      // Open Google Maps
+      await _openGoogleMaps(type);
+    } catch (e) {
+      print('Error in _handleEmergencyButtonPress: $e');
+
+      // Show error feedback - check if context is still valid
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to open maps app. Error: $e'),
+            duration: const Duration(seconds: 3),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _openGoogleMaps(String type) async {
+    String query;
+
+    switch (type) {
+      case 'hospital':
+        query = 'hospital';
+        break;
+      case 'police':
+        query = 'police station';
+        break;
+      default:
+        query = 'emergency services';
+    }
+
+    // For Android virtual devices, we need to use specific URL schemes
+    final List<Uri> urlsToTry = [
+      // Try Google Maps app with specific package intent (Android)
+      Uri.parse('https://maps.google.com/maps?q=$query+near+me'),
+      // Try geo scheme (should work on emulator)
+      Uri.parse('geo:0,0?q=$query+near+me'),
+      // Try Google Maps with navigation scheme
+      Uri.parse('google.navigation:q=$query+near+me'),
+      // Fallback to web version
+      Uri.parse('https://www.google.com/maps/search/$query+near+me'),
+    ];
+
+    bool opened = false;
+
+    // Try each URL scheme until one works
+    for (int i = 0; i < urlsToTry.length; i++) {
+      final url = urlsToTry[i];
+      try {
+        print('Trying URL $i: $url');
+
+        if (await canLaunchUrl(url)) {
+          print('URL $i can be launched, attempting to launch...');
+
+          final result = await launchUrl(
+            url,
+            mode: LaunchMode.externalApplication,
+          );
+
+          if (result) {
+            print('Successfully launched URL $i');
+            opened = true;
+            break;
+          } else {
+            print(
+              'Failed to launch URL $i despite canLaunchUrl returning true',
+            );
+          }
+        } else {
+          print('URL $i cannot be launched');
+        }
+      } catch (e) {
+        print('Error with URL $i: $e');
+        continue;
+      }
+    }
+
+    if (!opened) {
+      print(
+        'Could not launch any Google Maps URL for $type - all attempts failed',
+      );
+      // Try one more time with a direct intent-based approach for Android
+      try {
+        final androidIntent = Uri.parse(
+          'intent://maps.google.com/maps?q=$query+near+me#Intent;scheme=https;package=com.google.android.apps.maps;end',
+        );
+        if (await canLaunchUrl(androidIntent)) {
+          await launchUrl(androidIntent, mode: LaunchMode.externalApplication);
+          opened = true;
+        }
+      } catch (e) {
+        print('Android intent approach also failed: $e');
+      }
+    }
+
+    if (!opened) {
+      print('All Google Maps launch attempts failed for $type');
+    }
   }
 }
