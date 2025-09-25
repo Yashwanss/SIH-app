@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:safetravel_app/core/widgets/custom_text_field.dart';
 
 class StepHealth extends StatefulWidget {
-  const StepHealth({super.key});
+  final Function(bool)? onConsentChanged;
+
+  const StepHealth({super.key, this.onConsentChanged});
 
   @override
   State<StepHealth> createState() => _StepHealthState();
@@ -60,6 +62,10 @@ class _StepHealthState extends State<StepHealth> {
               setState(() {
                 _consentChecked = value ?? false;
               });
+              // Notify parent about consent change
+              if (widget.onConsentChanged != null) {
+                widget.onConsentChanged!(_consentChecked);
+              }
             },
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,

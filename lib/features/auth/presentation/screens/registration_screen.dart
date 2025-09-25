@@ -16,14 +16,27 @@ class RegistrationScreen extends StatefulWidget {
 class _RegistrationScreenState extends State<RegistrationScreen> {
   int _currentStep = 0;
   final PageController _pageController = PageController();
+  bool _privacyConsentGiven = false;
 
   // The 'const' keyword has been removed from 'StepPersonal()' to fix the error.
-  final List<Widget> _steps = [
-    StepPersonal(),
-    const StepTravel(),
-    const StepEmergency(),
-    const StepHealth(),
-  ];
+  late final List<Widget> _steps;
+
+  @override
+  void initState() {
+    super.initState();
+    _steps = [
+      StepPersonal(),
+      const StepTravel(),
+      const StepEmergency(),
+      StepHealth(onConsentChanged: _onPrivacyConsentChanged),
+    ];
+  }
+
+  void _onPrivacyConsentChanged(bool consent) {
+    setState(() {
+      _privacyConsentGiven = consent;
+    });
+  }
 
   void _nextStep() {
     if (_currentStep < _steps.length - 1) {
@@ -36,11 +49,37 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         curve: Curves.easeInOut,
       );
     } else {
+      // Check privacy consent before completing registration
+      if (!_privacyConsentGiven) {
+        _showPrivacyRequiredDialog();
+        return;
+      }
+
       // Navigate to completion screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const RegistrationCompleteScreen()),
       );
     }
+  }
+
+  void _showPrivacyRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Privacy Consent Required'),
+          content: const Text(
+            'You must consent to location tracking for safety purposes to complete your registration. This helps our emergency response team locate you if needed.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _previousStep() {
