@@ -1,0 +1,45 @@
+import 'package:flutter/material.dart';
+
+class CustomTextField extends StatelessWidget {
+  final String labelText;
+  final String? hintText;
+  final Icon? suffixIcon;
+  final bool isReadOnly;
+  final int maxLines;
+
+  const CustomTextField({
+    super.key,
+    required this.labelText,
+    this.hintText,
+    this.suffixIcon,
+    this.isReadOnly = false,
+    this.maxLines = 1,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (labelText.isNotEmpty)
+          Text(
+            labelText,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF333333),
+            ),
+          ),
+        if (labelText.isNotEmpty) const SizedBox(height: 8),
+        TextFormField(
+          readOnly: isReadOnly,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            hintText: hintText,
+            suffixIcon: suffixIcon,
+          ),
+        ),
+      ],
+    );
+  }
+}
