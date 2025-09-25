@@ -1,7 +1,33 @@
 import 'package:flutter/material.dart';
+import 'dart:math';
 
-class RegistrationCompleteScreen extends StatelessWidget {
+class RegistrationCompleteScreen extends StatefulWidget {
   const RegistrationCompleteScreen({super.key});
+
+  @override
+  State<RegistrationCompleteScreen> createState() =>
+      _RegistrationCompleteScreenState();
+}
+
+class _RegistrationCompleteScreenState
+    extends State<RegistrationCompleteScreen> {
+  late String _digitalId;
+
+  @override
+  void initState() {
+    super.initState();
+    _digitalId = _generateDigitalId();
+  }
+
+  String _generateDigitalId() {
+    final random = Random();
+    final randomNumber = random.nextInt(100000000); // Generates 0-99999999
+    final formattedNumber = randomNumber.toString().padLeft(
+      8,
+      '0',
+    ); // Ensures 8 digits
+    return 'TSA - $formattedNumber';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -9,14 +35,7 @@ class RegistrationCompleteScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.wb_sunny_outlined, color: Colors.black87),
-            onPressed: () {
-              // Toggle theme
-            },
-          ),
-        ],
+        // Removed theme toggle widget as requested
       ),
       body: Center(
         child: Padding(
@@ -58,9 +77,9 @@ class RegistrationCompleteScreen extends StatelessWidget {
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'Digital ID: TSA-09496808',
-                  style: TextStyle(
+                child: Text(
+                  'Digital ID: $_digitalId',
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1.5,
@@ -95,6 +114,30 @@ class RegistrationCompleteScreen extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Next button functionality - not routed yet as requested
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Next button pressed - routing not implemented yet',
+                        ),
+                        backgroundColor: Colors.blue,
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: const Text(
+                    'Next',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ),
             ],
