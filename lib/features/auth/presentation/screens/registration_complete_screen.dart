@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
+import '../../../dashboard/presentation/screens/safe_travel_dashboard.dart';
 
 class RegistrationCompleteScreen extends StatefulWidget {
   const RegistrationCompleteScreen({super.key});
@@ -121,13 +122,12 @@ class _RegistrationCompleteScreenState
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Next button functionality - not routed yet as requested
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Next button pressed - routing not implemented yet',
-                        ),
-                        backgroundColor: Colors.blue,
+                    // Navigate to dashboard with digital ID
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SafeTravelDashboard(digitalId: _digitalId),
                       ),
                     );
                   },
