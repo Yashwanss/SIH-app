@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:safetravel_app/core/widgets/custom_text_field.dart';
 import 'package:google_places_flutter/google_places_flutter.dart';
 import 'package:google_places_flutter/model/prediction.dart';
 import 'package:safetravel_app/core/constants/api_constants.dart';
 
 class StepTravel extends StatefulWidget {
-  const StepTravel({super.key});
+  final Function(bool)? onValidationChanged;
+
+  const StepTravel({super.key, this.onValidationChanged});
 
   @override
   State<StepTravel> createState() => _StepTravelState();
@@ -14,6 +15,9 @@ class StepTravel extends StatefulWidget {
 class _StepTravelState extends State<StepTravel> {
   String? _selectedLanguage = 'English';
   final TextEditingController _stayingAtController = TextEditingController();
+  final TextEditingController _passportController = TextEditingController();
+  final TextEditingController _aadhaarController = TextEditingController();
+
   final List<String> _languages = [
     'English',
     'Hindi',
@@ -29,7 +33,25 @@ class _StepTravelState extends State<StepTravel> {
   @override
   void dispose() {
     _stayingAtController.dispose();
+    _passportController.dispose();
+    _aadhaarController.dispose();
     super.dispose();
+  }
+
+  void _validateForm() {
+    // At least one identity document is required (passport OR aadhaar)
+    final hasIdentityDoc =
+        _passportController.text.trim().isNotEmpty ||
+        _aadhaarController.text.trim().isNotEmpty;
+
+    // Language must be selected (but we have a default value, so this is always valid)
+    final hasLanguage = _selectedLanguage != null;
+
+    final isValid = hasIdentityDoc && hasLanguage;
+
+    if (widget.onValidationChanged != null) {
+      widget.onValidationChanged!(isValid);
+    }
   }
 
   @override
@@ -49,14 +71,58 @@ class _StepTravelState extends State<StepTravel> {
             style: TextStyle(color: Colors.grey[600]),
           ),
           const SizedBox(height: 24),
-          const CustomTextField(
-            labelText: 'Passport Number',
-            hintText: 'Required for international travel',
+          TextFormField(
+            controller: _passportController,
+            onChanged: (_) => _validateForm(),
+            decoration: InputDecoration(
+              labelText: 'Passport Number',
+              hintText: 'Required for international travel',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
-          const CustomTextField(
-            labelText: 'Aadhaar Number',
-            hintText: 'e.g., 1234 5678 9012',
+          TextFormField(
+            controller: _aadhaarController,
+            onChanged: (_) => _validateForm(),
+            decoration: InputDecoration(
+              labelText: 'Aadhaar Number',
+              hintText: 'e.g., 1234 5678 9012',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
+            ),
           ),
           const SizedBox(height: 24),
           const Text(
@@ -158,6 +224,7 @@ class _StepTravelState extends State<StepTravel> {
               setState(() {
                 _selectedLanguage = newValue;
               });
+              _validateForm();
             },
             decoration: InputDecoration(
               border: OutlineInputBorder(

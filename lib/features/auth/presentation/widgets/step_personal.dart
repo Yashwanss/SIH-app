@@ -3,7 +3,9 @@ import 'package:safetravel_app/core/widgets/custom_text_field.dart';
 import 'package:intl/intl.dart'; // Add intl package to pubspec.yaml for date formatting
 
 class StepPersonal extends StatefulWidget {
-  const StepPersonal({super.key});
+  final Function(bool)? onValidationChanged;
+
+  const StepPersonal({super.key, this.onValidationChanged});
 
   @override
   State<StepPersonal> createState() => _StepPersonalState();
@@ -11,6 +13,7 @@ class StepPersonal extends StatefulWidget {
 
 class _StepPersonalState extends State<StepPersonal> {
   final TextEditingController _dobController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
   String? _selectedNationality;
   String? _selectedGender;
 
@@ -35,7 +38,20 @@ class _StepPersonalState extends State<StepPersonal> {
   @override
   void dispose() {
     _dobController.dispose();
+    _nameController.dispose();
     super.dispose();
+  }
+
+  void _validateForm() {
+    final isValid =
+        _nameController.text.trim().isNotEmpty &&
+        _dobController.text.trim().isNotEmpty &&
+        _selectedNationality != null &&
+        _selectedGender != null;
+
+    if (widget.onValidationChanged != null) {
+      widget.onValidationChanged!(isValid);
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -49,6 +65,7 @@ class _StepPersonalState extends State<StepPersonal> {
       setState(() {
         _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
+      _validateForm();
     }
   }
 
@@ -69,9 +86,31 @@ class _StepPersonalState extends State<StepPersonal> {
             style: TextStyle(color: Colors.grey[600]),
           ),
           const SizedBox(height: 24),
-          const CustomTextField(
-            labelText: 'Full Name *',
-            hintText: 'Enter your full name as on passport',
+          TextFormField(
+            controller: _nameController,
+            onChanged: (_) => _validateForm(),
+            decoration: InputDecoration(
+              labelText: 'Full Name *',
+              hintText: 'Enter your full name as on passport',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8.0),
+                borderSide: BorderSide(color: Theme.of(context).primaryColor),
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           CustomTextField(
@@ -105,6 +144,7 @@ class _StepPersonalState extends State<StepPersonal> {
               setState(() {
                 _selectedNationality = newValue;
               });
+              _validateForm();
             },
           ),
 
@@ -131,6 +171,7 @@ class _StepPersonalState extends State<StepPersonal> {
               setState(() {
                 _selectedGender = newValue;
               });
+              _validateForm();
             },
           ),
         ],

@@ -18,6 +18,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final PageController _pageController = PageController();
   bool _privacyConsentGiven = false;
 
+  // Validation states for each step
+  List<bool> _stepValidations = [false, false, false, false];
+
   // The 'const' keyword has been removed from 'StepPersonal()' to fix the error.
   late final List<Widget> _steps;
 
@@ -25,11 +28,30 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   void initState() {
     super.initState();
     _steps = [
-      StepPersonal(),
-      const StepTravel(),
-      const StepEmergency(),
-      StepHealth(onConsentChanged: _onPrivacyConsentChanged),
+      StepPersonal(
+        onValidationChanged: (isValid) => _updateStepValidation(0, isValid),
+      ),
+      StepTravel(
+        onValidationChanged: (isValid) => _updateStepValidation(1, isValid),
+      ),
+      StepEmergency(
+        onValidationChanged: (isValid) => _updateStepValidation(2, isValid),
+      ),
+      StepHealth(
+        onConsentChanged: _onPrivacyConsentChanged,
+        onValidationChanged: (isValid) => _updateStepValidation(3, isValid),
+      ),
     ];
+  }
+
+  void _updateStepValidation(int stepIndex, bool isValid) {
+    setState(() {
+      _stepValidations[stepIndex] = isValid;
+    });
+  }
+
+  bool _currentStepIsValid() {
+    return _stepValidations[_currentStep];
   }
 
   void _onPrivacyConsentChanged(bool consent) {
@@ -39,6 +61,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   void _nextStep() {
+    // Check if current step is valid before proceeding
+    if (!_stepValidations[_currentStep]) {
+      _showValidationRequiredDialog();
+      return;
+    }
+
     if (_currentStep < _steps.length - 1) {
       setState(() {
         _currentStep++;
@@ -60,6 +88,53 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         MaterialPageRoute(builder: (_) => const RegistrationCompleteScreen()),
       );
     }
+  }
+
+  void _showValidationRequiredDialog() {
+    String stepName;
+    String message;
+
+    switch (_currentStep) {
+      case 0:
+        stepName = 'Personal Information';
+        message =
+            'Please fill in all required fields: Full Name, Date of Birth, Nationality, and Gender.';
+        break;
+      case 1:
+        stepName = 'Travel Information';
+        message =
+            'Please provide at least one identity document (Passport Number or Aadhaar Number) and select your preferred language.';
+        break;
+      case 2:
+        stepName = 'Emergency Contacts';
+        message =
+            'Please provide at least one complete emergency contact with Name, Relationship, and Phone Number.';
+        break;
+      case 3:
+        stepName = 'Health & Privacy';
+        message =
+            'Please accept the privacy consent to complete your registration.';
+        break;
+      default:
+        stepName = 'Current Step';
+        message = 'Please fill in all required fields to continue.';
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('$stepName Required'),
+          content: Text(message),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _showPrivacyRequiredDialog() {
@@ -174,10 +249,35 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: _nextStep,
-                          child: Text(
-                            _currentStep == _steps.length - 1
-                                ? 'Register'
-                                : 'Next',
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _currentStepIsValid()
+                                ? null // Use default theme color
+                                : Colors.grey[400],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (!_currentStepIsValid()) ...[
+                                Icon(
+                                  Icons.warning_rounded,
+                                  size: 18,
+                                  color: Colors.grey[700],
+                                ),
+                                const SizedBox(width: 8),
+                              ],
+                              Text(
+                                _currentStep == _steps.length - 1
+                                    ? 'Register'
+                                    : 'Next',
+                              ),
+                              if (_currentStepIsValid()) ...[
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.arrow_forward_rounded,
+                                  size: 18,
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ),

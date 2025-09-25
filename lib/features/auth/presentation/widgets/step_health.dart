@@ -3,8 +3,13 @@ import 'package:safetravel_app/core/widgets/custom_text_field.dart';
 
 class StepHealth extends StatefulWidget {
   final Function(bool)? onConsentChanged;
+  final Function(bool)? onValidationChanged;
 
-  const StepHealth({super.key, this.onConsentChanged});
+  const StepHealth({
+    super.key,
+    this.onConsentChanged,
+    this.onValidationChanged,
+  });
 
   @override
   State<StepHealth> createState() => _StepHealthState();
@@ -12,6 +17,16 @@ class StepHealth extends StatefulWidget {
 
 class _StepHealthState extends State<StepHealth> {
   bool _consentChecked = false;
+
+  void _validateForm() {
+    // For health step, only privacy consent is required
+    // Health information fields are optional
+    final isValid = _consentChecked;
+
+    if (widget.onValidationChanged != null) {
+      widget.onValidationChanged!(isValid);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,6 +81,8 @@ class _StepHealthState extends State<StepHealth> {
               if (widget.onConsentChanged != null) {
                 widget.onConsentChanged!(_consentChecked);
               }
+              // Validate form
+              _validateForm();
             },
             controlAffinity: ListTileControlAffinity.leading,
             contentPadding: EdgeInsets.zero,

@@ -15,7 +15,9 @@ class EmergencyContact {
 }
 
 class StepEmergency extends StatefulWidget {
-  const StepEmergency({super.key});
+  final Function(bool)? onValidationChanged;
+
+  const StepEmergency({super.key, this.onValidationChanged});
 
   @override
   State<StepEmergency> createState() => _StepEmergencyState();
@@ -43,6 +45,7 @@ class _StepEmergencyState extends State<StepEmergency> {
       setState(() {
         emergencyContacts.add(EmergencyContact());
       });
+      _validateForm();
     }
   }
 
@@ -52,6 +55,23 @@ class _StepEmergencyState extends State<StepEmergency> {
       setState(() {
         emergencyContacts.removeAt(index);
       });
+      _validateForm();
+    }
+  }
+
+  void _validateForm() {
+    // At least one contact must have all required fields filled
+    final hasValidContact = emergencyContacts.any(
+      (contact) =>
+          contact.fullName != null &&
+          contact.fullName!.trim().isNotEmpty &&
+          contact.relationship != null &&
+          contact.phoneNumber != null &&
+          contact.phoneNumber!.trim().isNotEmpty,
+    );
+
+    if (widget.onValidationChanged != null) {
+      widget.onValidationChanged!(hasValidContact);
     }
   }
 
@@ -95,6 +115,7 @@ class _StepEmergencyState extends State<StepEmergency> {
           TextFormField(
             onChanged: (value) {
               contact.fullName = value;
+              _validateForm();
             },
             decoration: InputDecoration(
               labelText: 'Full Name *',
@@ -133,6 +154,7 @@ class _StepEmergencyState extends State<StepEmergency> {
               setState(() {
                 contact.relationship = newValue;
               });
+              _validateForm();
             },
             decoration: InputDecoration(
               labelText: 'Relationship *',
@@ -183,6 +205,7 @@ class _StepEmergencyState extends State<StepEmergency> {
                   keyboardType: TextInputType.phone,
                   onChanged: (value) {
                     contact.phoneNumber = '+91$value';
+                    _validateForm();
                   },
                   decoration: InputDecoration(
                     labelText: 'Phone Number *',
