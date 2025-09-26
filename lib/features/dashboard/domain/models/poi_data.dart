@@ -27,7 +27,7 @@ class PointOfInterest {
 
   factory PointOfInterest.fromJson(Map<String, dynamic> json) {
     return PointOfInterest(
-      id: json['id'] ?? '',
+      id: json['place_id'] ?? json['id'] ?? '',
       name: json['name'] ?? '',
       subtitle: json['subtitle'] ?? json['vicinity'] ?? '',
       type: POIType.fromString(json['type'] ?? json['types']?[0] ?? ''),
@@ -162,10 +162,14 @@ enum POIType {
     switch (type.toLowerCase()) {
       case 'hospital':
       case 'health':
+      case 'clinic':
+      case 'doctors':
         return POIType.hospital;
       case 'restaurant':
       case 'food':
       case 'meal_takeaway':
+      case 'fast_food':
+      case 'cafe':
         return POIType.restaurant;
       case 'gas_station':
       case 'petrol':
@@ -176,6 +180,8 @@ enum POIType {
         return POIType.atm;
       case 'tourist_attraction':
       case 'point_of_interest':
+      case 'attraction':
+      case 'tourism':
         return POIType.tourist;
       case 'pharmacy':
       case 'drugstore':
@@ -184,6 +190,7 @@ enum POIType {
         return POIType.police;
       case 'school':
       case 'university':
+      case 'college':
         return POIType.school;
       case 'bank':
         return POIType.bank;

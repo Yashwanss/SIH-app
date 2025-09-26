@@ -3,10 +3,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:telephony/telephony.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_sms/flutter_sms.dart';
 import '../models/emergency_contact.dart';
 
 class EmergencyService {
   static const String _contactsKey = 'emergency_contacts';
+  
+  // Telephony instance for direct SMS sending
+  final Telephony _telephony = Telephony.instance;
 
   // Singleton pattern
   static EmergencyService? _instance;
@@ -88,9 +94,16 @@ class EmergencyService {
     return LatLng(26.1445, 91.7362);
   }
 
-  /// Send SOS SMS to all emergency contacts using URL schemes
+  /// Send SOS SMS directly to all emergency contacts without opening external apps
   Future<bool> sendSOSMessage() async {
     try {
+      // Check and request SMS permission
+      final hasPermission = await _requestSMSPermissions();
+      if (!hasPermission) {
+        print('SMS permissions denied');
+        return false;
+      }
+
       // Get current or last known location
       final location = await getCurrentLocation();
       final contacts = await getSavedEmergencyContacts();
@@ -103,20 +116,18 @@ class EmergencyService {
       // Create SOS message with location
       final String message = _createSOSMessage(location);
 
-      // Send SMS to all contacts using URL schemes
+      // Send SMS directly to all contacts
       bool allSent = true;
       for (final contact in contacts) {
         try {
           final phoneNumber = contact.phoneNumber;
           if (phoneNumber != null && phoneNumber.isNotEmpty) {
             final cleanedNumber = _cleanPhoneNumber(phoneNumber);
-            final success = await _sendSMSViaURL(cleanedNumber, message);
+            final success = await _sendDirectSMS(cleanedNumber, message);
             if (success) {
-              print(
-                'SOS SMS intent opened for ${contact.name}: $cleanedNumber',
-              );
+              print('SOS SMS sent successfully to ${contact.name}: $cleanedNumber');
             } else {
-              print('Failed to open SMS for ${contact.name}: $cleanedNumber');
+              print('Failed to send SMS to ${contact.name}: $cleanedNumber');
               allSent = false;
             }
           } else {
@@ -136,49 +147,100 @@ class EmergencyService {
     }
   }
 
-  /// Send SMS using URL scheme (opens SMS app with pre-filled message)
-  Future<bool> _sendSMSViaURL(String phoneNumber, String message) async {
+  /// Check if SMS permissions are available
+  Future<bool> hasSMSPermissions() async {
     try {
-      print('Attempting to send SMS to: $phoneNumber');
-
-      // Try multiple SMS URI formats for better compatibility
-      final String encodedMessage = Uri.encodeComponent(message);
-
-      // Format 1: Standard SMS scheme with body parameter
-      List<Uri> smsUris = [
-        Uri.parse('sms:$phoneNumber?body=$encodedMessage'),
-        Uri.parse('smsto:$phoneNumber?body=$encodedMessage'),
-        Uri.parse('sms:$phoneNumber&body=$encodedMessage'),
-        Uri(
-          scheme: 'sms',
-          path: phoneNumber,
-          queryParameters: {'body': message},
-        ),
-      ];
-
-      for (int i = 0; i < smsUris.length; i++) {
-        final smsUri = smsUris[i];
-        print('Trying SMS format ${i + 1}: $smsUri');
-
-        try {
-          if (await canLaunchUrl(smsUri)) {
-            final success = await launchUrl(
-              smsUri,
-              mode: LaunchMode.externalApplication,
-            );
-            print('SMS launch result (format ${i + 1}): $success');
-            return true;
-          }
-        } catch (e) {
-          print('Failed SMS format ${i + 1}: $e');
-          continue;
-        }
+      // Check permission_handler SMS permission
+      var status = await Permission.sms.status;
+      if (status.isGranted) {
+        return true;
       }
 
-      print('All SMS formats failed for: $phoneNumber');
+      // Check telephony SMS permission
+      final bool? hasPermission = await _telephony.requestSmsPermissions;
+      return hasPermission ?? false;
+    } catch (e) {
+      print('Error checking SMS permissions: $e');
+      return false;
+    }
+  }
+
+  /// Request SMS permissions with user-friendly handling
+  Future<bool> requestSMSPermissions() async {
+    return await _requestSMSPermissions();
+  }
+
+  /// Request SMS permissions
+  Future<bool> _requestSMSPermissions() async {
+    try {
+      // Check if SMS permission is already granted
+      var status = await Permission.sms.status;
+      if (status.isGranted) {
+        return true;
+      }
+
+      // Request SMS permission
+      status = await Permission.sms.request();
+      if (status.isGranted) {
+        return true;
+      }
+
+      // If denied, try alternative approach with telephony
+      final bool? hasPermission = await _telephony.requestSmsPermissions;
+      return hasPermission ?? false;
+    } catch (e) {
+      print('Error requesting SMS permissions: $e');
+      return false;
+    }
+  }
+
+  /// Send SMS directly using telephony package with flutter_sms fallback
+  Future<bool> _sendDirectSMS(String phoneNumber, String message) async {
+    try {
+      print('Sending direct SMS to: $phoneNumber');
+      
+      // Method 1: Try telephony package first
+      try {
+        await _telephony.sendSms(
+          to: phoneNumber,
+          message: message,
+          statusListener: (status) {
+            switch (status) {
+              case SendStatus.SENT:
+                print('SMS sent to $phoneNumber');
+                break;
+              case SendStatus.DELIVERED:
+                print('SMS delivered to $phoneNumber');
+                break;
+            }
+          },
+        );
+        return true;
+      } catch (e) {
+        print('Telephony SMS failed for $phoneNumber: $e');
+      }
+      
+      // Method 2: Try flutter_sms as fallback
+      try {
+        List<String> recipients = [phoneNumber];
+        String result = await sendSMS(
+          message: message, 
+          recipients: recipients,
+        );
+        print('Flutter SMS result for $phoneNumber: $result');
+        
+        // Check if SMS was sent successfully
+        if (result.contains('sent')) {
+          return true;
+        }
+      } catch (e) {
+        print('Flutter SMS failed for $phoneNumber: $e');
+      }
+      
+      print('All SMS methods failed for $phoneNumber');
       return false;
     } catch (e) {
-      print('Error opening SMS app: $e');
+      print('Error sending direct SMS to $phoneNumber: $e');
       return false;
     }
   }
