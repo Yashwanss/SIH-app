@@ -10,7 +10,7 @@ import '../models/emergency_contact.dart';
 
 class EmergencyService {
   static const String _contactsKey = 'emergency_contacts';
-  
+
   // Telephony instance for direct SMS sending
   final Telephony _telephony = Telephony.instance;
 
@@ -125,7 +125,9 @@ class EmergencyService {
             final cleanedNumber = _cleanPhoneNumber(phoneNumber);
             final success = await _sendDirectSMS(cleanedNumber, message);
             if (success) {
-              print('SOS SMS sent successfully to ${contact.name}: $cleanedNumber');
+              print(
+                'SOS SMS sent successfully to ${contact.name}: $cleanedNumber',
+              );
             } else {
               print('Failed to send SMS to ${contact.name}: $cleanedNumber');
               allSent = false;
@@ -198,7 +200,7 @@ class EmergencyService {
   Future<bool> _sendDirectSMS(String phoneNumber, String message) async {
     try {
       print('Sending direct SMS to: $phoneNumber');
-      
+
       // Method 1: Try telephony package first
       try {
         await _telephony.sendSms(
@@ -219,16 +221,13 @@ class EmergencyService {
       } catch (e) {
         print('Telephony SMS failed for $phoneNumber: $e');
       }
-      
+
       // Method 2: Try flutter_sms as fallback
       try {
         List<String> recipients = [phoneNumber];
-        String result = await sendSMS(
-          message: message, 
-          recipients: recipients,
-        );
+        String result = await sendSMS(message: message, recipients: recipients);
         print('Flutter SMS result for $phoneNumber: $result');
-        
+
         // Check if SMS was sent successfully
         if (result.contains('sent')) {
           return true;
@@ -236,7 +235,7 @@ class EmergencyService {
       } catch (e) {
         print('Flutter SMS failed for $phoneNumber: $e');
       }
-      
+
       print('All SMS methods failed for $phoneNumber');
       return false;
     } catch (e) {
