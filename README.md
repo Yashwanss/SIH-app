@@ -1,4 +1,4 @@
-# SafeTravel App
+# SafeTravel App (In alpha)
 
 A Flutter application with multi-step safety registration flow featuring location autocomplete functionality.
 
