@@ -54,10 +54,30 @@
             <action android:name="android.intent.action.VIEW" />
             <data android:scheme="https" />
         </intent>
+        <!-- Allow querying SMS apps -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="sms" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="smsto" />
+        </intent>
+        <!-- Allow querying phone dialer -->
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.CALL" />
+        </intent>
         <!-- Specifically for Google Maps -->
         <package android:name="com.google.android.apps.maps" />
     </queries>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Permission to query and launch phone dialer -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+    <!-- Permission to send SMS -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
 </manifest>

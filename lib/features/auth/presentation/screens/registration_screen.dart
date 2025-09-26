@@ -5,6 +5,7 @@ import 'package:safetravel_app/features/auth/presentation/widgets/step_personal.
 import 'package:safetravel_app/features/auth/presentation/widgets/step_travel.dart';
 import 'package:safetravel_app/features/auth/presentation/widgets/step_emergency.dart';
 import 'package:safetravel_app/features/auth/presentation/widgets/step_health.dart';
+import 'package:safetravel_app/features/dashboard/domain/services/emergency_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -21,6 +22,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   // Validation states for each step
   List<bool> _stepValidations = [false, false, false, false];
 
+  // Global key to access StepEmergency state
+  final GlobalKey<StepEmergencyState> _emergencyStepKey =
+      GlobalKey<StepEmergencyState>();
+
   // The 'const' keyword has been removed from 'StepPersonal()' to fix the error.
   late final List<Widget> _steps;
 
@@ -35,6 +40,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         onValidationChanged: (isValid) => _updateStepValidation(1, isValid),
       ),
       StepEmergency(
+        key: _emergencyStepKey,
         onValidationChanged: (isValid) => _updateStepValidation(2, isValid),
       ),
       StepHealth(
@@ -60,7 +66,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
   }
 
-  void _nextStep() {
+  void _nextStep() async {
     // Check if current step is valid before proceeding
     if (!_stepValidations[_currentStep]) {
       _showValidationRequiredDialog();
@@ -82,6 +88,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         _showPrivacyRequiredDialog();
         return;
       }
+
+      // Save emergency contacts before completing registration
+      await _saveEmergencyContacts();
 
       // Navigate to completion screen
       Navigator.of(context).pushReplacement(
@@ -135,6 +144,27 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         );
       },
     );
+  }
+
+  // Save emergency contacts to persistent storage
+  Future<void> _saveEmergencyContacts() async {
+    try {
+      final emergencyStepState = _emergencyStepKey.currentState;
+      if (emergencyStepState != null) {
+        final validContacts = emergencyStepState.validEmergencyContacts;
+        if (validContacts.isNotEmpty) {
+          final emergencyService = EmergencyService();
+          await emergencyService.saveEmergencyContactsFromRegistration(
+            validContacts,
+          );
+          print(
+            'Successfully saved ${validContacts.length} emergency contacts',
+          );
+        }
+      }
+    } catch (e) {
+      print('Error saving emergency contacts during registration: $e');
+    }
   }
 
   void _showPrivacyRequiredDialog() {

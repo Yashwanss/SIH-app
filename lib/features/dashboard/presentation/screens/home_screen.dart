@@ -24,6 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final WeatherService _weatherService = WeatherService();
   final POIService _poiService = POIService();
+  final MapController _mapController = MapController();
 
   @override
   void initState() {
@@ -44,10 +45,22 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final location = await _poiService.getCurrentLocation();
       if (mounted) {
+        final oldLocation = _currentLocation;
         setState(() {
           _currentLocation = location;
           _isLoadingLocation = false;
         });
+
+        // Move map to new location if it's significantly different
+        final distance = const Distance().as(
+          LengthUnit.Meter,
+          oldLocation,
+          location,
+        );
+        if (distance > 100) {
+          // Only move if more than 100 meters difference
+          _mapController.move(location, 15.0);
+        }
 
         // Reload POIs with the new location if POIs are still loading
         if (_isLoadingPOIs) {
@@ -55,6 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
     } catch (e) {
+      print('Error loading location: $e');
       if (mounted) {
         setState(() => _isLoadingLocation = false);
       }
@@ -132,6 +146,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _refreshData() async {
     await _loadData();
+  }
+
+  void _recenterMap() {
+    _mapController.move(_currentLocation, 15.0);
   }
 
   @override
@@ -349,83 +367,118 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: FlutterMap(
-          options: MapOptions(
-            initialCenter: _currentLocation,
-            initialZoom: 15.0,
-            interactionOptions: const InteractionOptions(
-              flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _currentLocation,
+                initialZoom: 15.0,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
+              ),
+              children: [
+                // OpenStreetMap tile layer
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.safetravel',
+                  maxZoom: 19,
+                ),
+
+                // User location marker
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _currentLocation,
+                      width: 64,
+                      height: 64,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(0, 2),
+                              blurRadius: 4,
+                            ),
+                          ],
+                        ),
+                        child: Stack(
+                          children: [
+                            const Center(
+                              child: Icon(
+                                Icons.location_pin,
+                                size: 32,
+                                color: Color(0xFFDC2626), // Red-500
+                              ),
+                            ),
+                            // Pulse Indicator
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFF2563EB), // Blue-500
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Offline/Online Badge overlay
+                RichAttributionWidget(
+                  attributions: [
+                    TextSourceAttribution(
+                      'OpenStreetMap contributors',
+                      onTap: () {},
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-          children: [
-            // OpenStreetMap tile layer
-            TileLayer(
-              urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-              userAgentPackageName: 'com.example.safetravel',
-              maxZoom: 19,
-            ),
 
-            // User location marker
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: _currentLocation,
-                  width: 64,
-                  height: 64,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: const Offset(0, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                    child: Stack(
-                      children: [
-                        const Center(
-                          child: Icon(
-                            Icons.location_pin,
-                            size: 32,
-                            color: Color(0xFFDC2626), // Red-500
-                          ),
-                        ),
-                        // Pulse Indicator
-                        Positioned(
-                          top: 8,
-                          right: 8,
-                          child: Container(
-                            width: 16,
-                            height: 16,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF2563EB), // Blue-500
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+          // Recenter button
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    offset: const Offset(0, 2),
+                    blurRadius: 4,
                   ),
+                ],
+              ),
+              child: IconButton(
+                onPressed: _recenterMap,
+                icon: const Icon(
+                  Icons.my_location,
+                  color: Color(0xFF2563EB),
+                  size: 20,
                 ),
-              ],
+                tooltip: 'Recenter to current location',
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              ),
             ),
-
-            // Offline/Online Badge overlay
-            RichAttributionWidget(
-              attributions: [
-                TextSourceAttribution(
-                  'OpenStreetMap contributors',
-                  onTap: () {},
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

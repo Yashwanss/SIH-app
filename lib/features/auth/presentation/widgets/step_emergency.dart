@@ -1,17 +1,38 @@
 import 'package:flutter/material.dart';
+import 'package:safetravel_app/features/dashboard/domain/models/emergency_contact.dart';
 
-class EmergencyContact {
+// Mutable class for form input during registration
+class RegistrationEmergencyContact {
   String? fullName;
   String? relationship;
   String? phoneNumber;
   String? emailAddress;
 
-  EmergencyContact({
+  RegistrationEmergencyContact({
     this.fullName,
     this.relationship,
     this.phoneNumber,
     this.emailAddress,
   });
+
+  // Convert to the immutable EmergencyContact
+  EmergencyContact toEmergencyContact({required String id}) {
+    return EmergencyContact(
+      id: id,
+      fullName: fullName,
+      relationship: relationship,
+      phoneNumber: phoneNumber,
+      emailAddress: emailAddress,
+    );
+  }
+
+  bool isValid() {
+    return fullName != null &&
+        fullName!.trim().isNotEmpty &&
+        relationship != null &&
+        phoneNumber != null &&
+        phoneNumber!.trim().isNotEmpty;
+  }
 }
 
 class StepEmergency extends StatefulWidget {
@@ -20,11 +41,13 @@ class StepEmergency extends StatefulWidget {
   const StepEmergency({super.key, this.onValidationChanged});
 
   @override
-  State<StepEmergency> createState() => _StepEmergencyState();
+  State<StepEmergency> createState() => StepEmergencyState();
 }
 
-class _StepEmergencyState extends State<StepEmergency> {
-  List<EmergencyContact> emergencyContacts = [EmergencyContact()];
+class StepEmergencyState extends State<StepEmergency> {
+  List<RegistrationEmergencyContact> emergencyContacts = [
+    RegistrationEmergencyContact(),
+  ];
 
   final List<String> relationships = [
     'Parent',
@@ -39,11 +62,25 @@ class _StepEmergencyState extends State<StepEmergency> {
     'Partner',
   ];
 
+  // Getter to expose valid emergency contacts as immutable EmergencyContact objects
+  List<EmergencyContact> get validEmergencyContacts {
+    return emergencyContacts
+        .where((contact) => contact.isValid())
+        .map(
+          (contact) => contact.toEmergencyContact(
+            id:
+                DateTime.now().millisecondsSinceEpoch.toString() +
+                '_${emergencyContacts.indexOf(contact)}',
+          ),
+        )
+        .toList();
+  }
+
   void _addEmergencyContact() {
     if (emergencyContacts.length < 5) {
       // Limit to 5 contacts
       setState(() {
-        emergencyContacts.add(EmergencyContact());
+        emergencyContacts.add(RegistrationEmergencyContact());
       });
       _validateForm();
     }
@@ -62,12 +99,7 @@ class _StepEmergencyState extends State<StepEmergency> {
   void _validateForm() {
     // At least one contact must have all required fields filled
     final hasValidContact = emergencyContacts.any(
-      (contact) =>
-          contact.fullName != null &&
-          contact.fullName!.trim().isNotEmpty &&
-          contact.relationship != null &&
-          contact.phoneNumber != null &&
-          contact.phoneNumber!.trim().isNotEmpty,
+      (contact) => contact.isValid(),
     );
 
     if (widget.onValidationChanged != null) {
