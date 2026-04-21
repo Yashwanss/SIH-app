@@ -21,6 +21,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingWeather = true;
   bool _isLoadingPOIs = true;
   bool _isLoadingLocation = true;
+  bool _isRefreshingLocation = false;
+  LatLng? _lastPOILoadLocation;
 
   final WeatherService _weatherService = WeatherService();
   final POIService _poiService = POIService();
@@ -58,13 +60,18 @@ class _HomeScreenState extends State<HomeScreen> {
           location,
         );
         if (distance > 100) {
-          // Only move if more than 100 meters difference
+          // Only move map and reload POIs if more than 100 meters difference
           _mapController.move(location, 15.0);
-        }
-
-        // Reload POIs with the new location if POIs are still loading
-        if (_isLoadingPOIs) {
-          _loadPOIsAsync();
+          final poiDistanceFromLastLoad = _lastPOILoadLocation == null
+              ? double.infinity
+              : const Distance().as(
+                  LengthUnit.Meter,
+                  _lastPOILoadLocation!,
+                  location,
+                );
+          if (poiDistanceFromLastLoad > 100) {
+            _loadPOIsAsync();
+          }
         }
       }
     } catch (e) {
@@ -92,12 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadPOIsAsync() async {
+    final locationForRequest = _currentLocation;
     try {
-      final pois = await _poiService.getNearbyPOIs(_currentLocation);
+      final pois = await _poiService.getNearbyPOIs(locationForRequest);
       if (mounted) {
         setState(() {
           _pois = pois;
           _isLoadingPOIs = false;
+          _lastPOILoadLocation = locationForRequest;
         });
       }
     } catch (e) {
@@ -148,8 +157,41 @@ class _HomeScreenState extends State<HomeScreen> {
     await _loadData();
   }
 
-  void _recenterMap() {
-    _mapController.move(_currentLocation, 15.0);
+  Future<void> _recenterMap() async {
+    if (_isRefreshingLocation) return;
+
+    setState(() {
+      _isRefreshingLocation = true;
+    });
+
+    try {
+      final location = await _poiService.getCurrentLocation();
+      if (!mounted) return;
+
+      setState(() {
+        _currentLocation = location;
+        _isLoadingLocation = false;
+      });
+      _mapController.move(location, 15.0);
+      _loadPOIsAsync();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Unable to get current location. Please try again.',
+            ),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshingLocation = false;
+        });
+      }
+    }
   }
 
   @override
@@ -466,12 +508,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               child: IconButton(
-                onPressed: _recenterMap,
-                icon: const Icon(
-                  Icons.my_location,
-                  color: Color(0xFF2563EB),
-                  size: 20,
-                ),
+                key: const Key('recenter-location-button'),
+                onPressed: _isRefreshingLocation ? null : _recenterMap,
+                icon: _isRefreshingLocation
+                    ? const SizedBox(
+                        key: Key('recenter-location-progress'),
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(
+                        Icons.my_location,
+                        color: Color(0xFF2563EB),
+                        size: 20,
+                      ),
                 tooltip: 'Recenter to current location',
                 padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
