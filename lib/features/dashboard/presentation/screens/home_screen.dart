@@ -22,6 +22,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingPOIs = true;
   bool _isLoadingLocation = true;
   bool _isRefreshingLocation = false;
+  LatLng? _lastPOILoadLocation;
 
   final WeatherService _weatherService = WeatherService();
   final POIService _poiService = POIService();
@@ -59,9 +60,18 @@ class _HomeScreenState extends State<HomeScreen> {
           location,
         );
         if (distance > 100) {
-          // Only move if more than 100 meters difference
+          // Only move map and reload POIs if more than 100 meters difference
           _mapController.move(location, 15.0);
-          _loadPOIsAsync();
+          final poiDistanceFromLastLoad = _lastPOILoadLocation == null
+              ? double.infinity
+              : const Distance().as(
+                  LengthUnit.Meter,
+                  _lastPOILoadLocation!,
+                  location,
+                );
+          if (poiDistanceFromLastLoad > 100) {
+            _loadPOIsAsync();
+          }
         }
       }
     } catch (e) {
@@ -89,12 +99,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadPOIsAsync() async {
+    final locationForRequest = _currentLocation;
     try {
-      final pois = await _poiService.getNearbyPOIs(_currentLocation);
+      final pois = await _poiService.getNearbyPOIs(locationForRequest);
       if (mounted) {
         setState(() {
           _pois = pois;
           _isLoadingPOIs = false;
+          _lastPOILoadLocation = locationForRequest;
         });
       }
     } catch (e) {
@@ -166,7 +178,9 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Unable to refresh current location right now.'),
+            content: Text(
+              'Unable to get current location. Please try again.',
+            ),
             duration: Duration(seconds: 2),
           ),
         );
