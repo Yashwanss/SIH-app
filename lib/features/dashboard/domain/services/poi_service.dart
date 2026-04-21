@@ -294,26 +294,19 @@ out geom;
 
       serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        // Cache and return default Guwahati location
-        final defaultLocation = LatLng(26.1445, 91.7362);
-        _cacheLocation(defaultLocation);
-        return defaultLocation;
+        return await _getLastKnownOrDefaultLocation();
       }
 
       permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          final defaultLocation = LatLng(26.1445, 91.7362);
-          _cacheLocation(defaultLocation);
-          return defaultLocation;
+          return await _getLastKnownOrDefaultLocation();
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        final defaultLocation = LatLng(26.1445, 91.7362);
-        _cacheLocation(defaultLocation);
-        return defaultLocation;
+        return await _getLastKnownOrDefaultLocation();
       }
 
       Position position = await Geolocator.getCurrentPosition(
@@ -330,14 +323,32 @@ out geom;
       return location;
     } catch (e) {
       print('Error getting current location: $e');
-      // Return cached location if available, otherwise default
-      if (_cachedLocation != null) {
-        return _cachedLocation!;
-      }
-      final defaultLocation = LatLng(26.1445, 91.7362);
-      _cacheLocation(defaultLocation);
-      return defaultLocation;
+      return await _getLastKnownOrDefaultLocation();
     }
+  }
+
+  Future<LatLng> _getLastKnownOrDefaultLocation() async {
+    if (_cachedLocation != null) {
+      return _cachedLocation!;
+    }
+
+    try {
+      final lastKnownPosition = await Geolocator.getLastKnownPosition();
+      if (lastKnownPosition != null) {
+        final lastKnownLocation = LatLng(
+          lastKnownPosition.latitude,
+          lastKnownPosition.longitude,
+        );
+        _cacheLocation(lastKnownLocation);
+        return lastKnownLocation;
+      }
+    } catch (e) {
+      print('Error getting last known location: $e');
+    }
+
+    final defaultLocation = LatLng(26.1445, 91.7362);
+    _cacheLocation(defaultLocation);
+    return defaultLocation;
   }
 
   void _cacheLocation(LatLng location) {
