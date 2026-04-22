@@ -3,16 +3,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:telephony/telephony.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_sms/flutter_sms.dart';
 import '../models/emergency_contact.dart';
 
 class EmergencyService {
   static const String _contactsKey = 'emergency_contacts';
-  
-  // Telephony instance for direct SMS sending
-  final Telephony _telephony = Telephony.instance;
 
   // Singleton pattern
   static EmergencyService? _instance;
@@ -125,7 +121,9 @@ class EmergencyService {
             final cleanedNumber = _cleanPhoneNumber(phoneNumber);
             final success = await _sendDirectSMS(cleanedNumber, message);
             if (success) {
-              print('SOS SMS sent successfully to ${contact.name}: $cleanedNumber');
+              print(
+                'SOS SMS sent successfully to ${contact.name}: $cleanedNumber',
+              );
             } else {
               print('Failed to send SMS to ${contact.name}: $cleanedNumber');
               allSent = false;
@@ -150,15 +148,8 @@ class EmergencyService {
   /// Check if SMS permissions are available
   Future<bool> hasSMSPermissions() async {
     try {
-      // Check permission_handler SMS permission
       var status = await Permission.sms.status;
-      if (status.isGranted) {
-        return true;
-      }
-
-      // Check telephony SMS permission
-      final bool? hasPermission = await _telephony.requestSmsPermissions;
-      return hasPermission ?? false;
+      return status.isGranted;
     } catch (e) {
       print('Error checking SMS permissions: $e');
       return false;
@@ -173,7 +164,6 @@ class EmergencyService {
   /// Request SMS permissions
   Future<bool> _requestSMSPermissions() async {
     try {
-      // Check if SMS permission is already granted
       var status = await Permission.sms.status;
       if (status.isGranted) {
         return true;
@@ -185,59 +175,31 @@ class EmergencyService {
         return true;
       }
 
-      // If denied, try alternative approach with telephony
-      final bool? hasPermission = await _telephony.requestSmsPermissions;
-      return hasPermission ?? false;
+      return false;
     } catch (e) {
       print('Error requesting SMS permissions: $e');
       return false;
     }
   }
 
-  /// Send SMS directly using telephony package with flutter_sms fallback
+  /// Send SMS using flutter_sms
   Future<bool> _sendDirectSMS(String phoneNumber, String message) async {
     try {
       print('Sending direct SMS to: $phoneNumber');
-      
-      // Method 1: Try telephony package first
-      try {
-        await _telephony.sendSms(
-          to: phoneNumber,
-          message: message,
-          statusListener: (status) {
-            switch (status) {
-              case SendStatus.SENT:
-                print('SMS sent to $phoneNumber');
-                break;
-              case SendStatus.DELIVERED:
-                print('SMS delivered to $phoneNumber');
-                break;
-            }
-          },
-        );
-        return true;
-      } catch (e) {
-        print('Telephony SMS failed for $phoneNumber: $e');
-      }
-      
-      // Method 2: Try flutter_sms as fallback
+
       try {
         List<String> recipients = [phoneNumber];
-        String result = await sendSMS(
-          message: message, 
-          recipients: recipients,
-        );
+        String result = await sendSMS(message: message, recipients: recipients);
         print('Flutter SMS result for $phoneNumber: $result');
-        
-        // Check if SMS was sent successfully
-        if (result.contains('sent')) {
+
+        if (result.toLowerCase().contains('sent')) {
           return true;
         }
       } catch (e) {
         print('Flutter SMS failed for $phoneNumber: $e');
       }
-      
-      print('All SMS methods failed for $phoneNumber');
+
+      print('SMS sending failed for $phoneNumber');
       return false;
     } catch (e) {
       print('Error sending direct SMS to $phoneNumber: $e');
